@@ -133,7 +133,7 @@
 #' st_write(nc_fetch_sf, "nc_fetch.shp", driver = "ESRI Shapefile")
 #' }
 #' @export
-windfetch = function(polygon_layer, site_layer, max_dist = 300, n_directions = 9,
+windfetch = function(polygon_layer, site_layer, max_dist = 100, n_directions = 4,
                      quiet = FALSE, progress_bar = TRUE) {
 
   if (!any(is(polygon_layer, "sf"), is(polygon_layer, "sfc")))
