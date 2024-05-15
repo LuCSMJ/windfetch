@@ -133,6 +133,8 @@
 #' st_write(nc_fetch_sf, "nc_fetch.shp", driver = "ESRI Shapefile")
 #' }
 #' @export
+
+## Here you can modify maximum vector distance and the # of directions considered per quadrant.
 windfetch = function(polygon_layer, site_layer, max_dist = 100, n_directions = 4,
                      quiet = FALSE, progress_bar = TRUE) {
 
@@ -240,21 +242,28 @@ windfetch = function(polygon_layer, site_layer, max_dist = 100, n_directions = 4
   # Rearrange sequence order to start at 90 degrees
   directions = unlist(split(directions, directions < 90), use.names = FALSE)
 
+  ## I think this fetches the maximum end coordinate for each fetch vector over all points (considering the max dist argument).
   fetch_ends = st_buffer(site_layer, max_dist, n_directions)
   fetch_ends_df = as.data.frame(st_coordinates(fetch_ends))
 
+  ## This will fetch the point id of each fetch_ends_df object.
   fetch_ends_df$site_names = site_names[fetch_ends_df[, 4]]
 
+  ## Another data frame is created here storing the origin of each of the fetch vectors.
   fetch_locs_df = as.data.frame(st_coordinates(site_layer))
   colnames(fetch_locs_df) = c("X0", "Y0")
   fetch_locs_df$site_names = site_names
 
+  ## Here a left table join is performed, matching records in the fetch_ends_df (end points) to records 
+  ## in the fetch_locs_df based on the common field "site_names". The DF is ordered by site_names and directions.
   fetch_df = unique(left_join(fetch_ends_df, fetch_locs_df, by = "site_names"))
   fetch_df$directions = c(head(seq(90, 360, by = 360 / (n_directions * 4)), -1),
                           head(seq(0, 90, by = 360 / (n_directions * 4)), -1))
   fetch_df = fetch_df[with(fetch_df, order(site_names, directions)), ]
 
-
+  ## The fetch_df object is converted to an sf geometry object containing linestring vectors from the origins to their corresponding endpoints.
+  ## The crs is set to match the polygon layer. The origin object is created from the fetch_df coordinates columns "X0 Y0" (originating from fetch_locs_df)
+  ## and has its crs also set equal to the polygon layer.
   fetch_df = st_sf(fetch_df[, c("site_names", "directions")],
                    geom = st_sfc(sapply(apply(fetch_df, 1, function(x) {
                      X0 = as.numeric(x['X0'])
@@ -267,6 +276,7 @@ windfetch = function(polygon_layer, site_layer, max_dist = 100, n_directions = 4
                      st_sfc(st_point(c(as.numeric(x['X0']), as.numeric(x['Y0']))))
                    }), st_sfc), crs = st_crs(polygon_layer)))
 
+  ## Return a subset geometry object of the polygon layer where the length of the intersections between polygon_layer and fetch_df > 0.
   poly_subset = subset(polygon_layer, lengths(st_intersects(polygon_layer, fetch_df)) > 0)
 
   if (progress_bar)
