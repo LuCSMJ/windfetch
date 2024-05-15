@@ -276,12 +276,14 @@ windfetch = function(polygon_layer, site_layer, max_dist = 100, n_directions = 4
                      st_sfc(st_point(c(as.numeric(x['X0']), as.numeric(x['Y0']))))
                    }), st_sfc), crs = st_crs(polygon_layer)))
 
-  ## Return a subset geometry object of the polygon layer where the length of the intersections between polygon_layer and fetch_df > 0.
+  ## Return a subset geometry object of the polygon layer where only polygon features that intersect with fetch_df are present.
   poly_subset = subset(polygon_layer, lengths(st_intersects(polygon_layer, fetch_df)) > 0)
 
+  ## If the user requests a progress bar, display one.
   if (progress_bar)
     pb = txtProgressBar(max = nrow(fetch_df), style = 3)
 
+  ## for each row in the fetch_df data frame, run the return_fetch_vector external function, returning the fetch variable.
   for (i in 1:nrow(fetch_df)) {
     fetch_df$fetch[i] = as.data.frame(
       return_fetch_vector(fetch_df[i, "geom"],
@@ -292,9 +294,11 @@ windfetch = function(polygon_layer, site_layer, max_dist = 100, n_directions = 4
   }
   cat("\n")
 
+  ## Set the crs of the fetch geometries equal to the polygon layer.
   fetch_df$fetch = st_sfc(lapply(fetch_df$fetch, `[[`, 1),
                           crs = st_crs(polygon_layer))
 
+  ## Assign a quadrant to each fetch vector and calculate the length.
   st_geometry(fetch_df) = fetch_df$fetch
   fetch_df = fetch_df[, 1:2]
   fetch_df$quadrant = factor(quadrant,
