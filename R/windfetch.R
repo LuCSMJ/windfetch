@@ -277,7 +277,7 @@ windfetch = function(polygon_layer, site_layer, max_dist = 100, n_directions = 4
                    }), st_sfc), crs = st_crs(polygon_layer)))
 
   ## Return a subset geometry object of the polygon layer where only polygon features that intersect with fetch_df are present.
-  ## poly_subset = subset(polygon_layer, lengths(st_intersects(polygon_layer, fetch_df)) > 0)
+  poly_subset = subset(polygon_layer, lengths(st_intersects(polygon_layer, fetch_df)) > 0)
 
   parallel::detectCores()
   n.cores <-parallel::detectCores() - 1
@@ -297,7 +297,7 @@ windfetch = function(polygon_layer, site_layer, max_dist = 100, n_directions = 4
     fetch_df$fetch[i] = as.data.frame(
       return_fetch_vector(fetch_df[i, "geom"],
                           fetch_df$origin[i],
-                          polygon_layer))
+                          poly_subset))
     if (progress_bar)
       setTxtProgressBar(pb, i)
   }
