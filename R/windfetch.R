@@ -277,18 +277,27 @@ windfetch = function(polygon_layer, site_layer, max_dist = 100, n_directions = 4
                    }), st_sfc), crs = st_crs(polygon_layer)))
 
   ## Return a subset geometry object of the polygon layer where only polygon features that intersect with fetch_df are present.
-  poly_subset = subset(polygon_layer, lengths(st_intersects(polygon_layer, fetch_df)) > 0)
+  ## poly_subset = subset(polygon_layer, lengths(st_intersects(polygon_layer, fetch_df)) > 0)
 
+  parallel::detectCores()
+  n.cores <-parallel::detectCores() - 1
+
+  my.cluster <- parallel::makeCluster(
+    n.cores,
+    type = "PSOCK"
+  )
+
+  doParallel::registerDoParallel(cl = my.cluster)
   ## If the user requests a progress bar, display one.
   if (progress_bar)
     pb = txtProgressBar(max = nrow(fetch_df), style = 3)
 
   ## for each row in the fetch_df data frame, run the return_fetch_vector external function, returning the fetch variable.
-  for (i in 1:nrow(fetch_df)) {
+  foreach (i = 1:nrow(fetch_df)) %dopar% {
     fetch_df$fetch[i] = as.data.frame(
       return_fetch_vector(fetch_df[i, "geom"],
                           fetch_df$origin[i],
-                          poly_subset))
+                          polygon_layer))
     if (progress_bar)
       setTxtProgressBar(pb, i)
   }
